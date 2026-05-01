@@ -1,5 +1,7 @@
 "use client"
 
+import { useTheme } from "next-themes"
+import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 
 interface CampusOrbitLogoProps {
@@ -74,19 +76,29 @@ interface CampusOrbitIconProps {
 }
 
 /**
- * Icon-only version — uses the real extracted logo PNG.
- * Light mode: logo.png (transparent background, dark+orange strokes)
- * Dark mode:  logo.png (same file — orange pops on dark bg naturally)
+ * Icon-only version — switches between light/dark logo variants.
+ * Light mode: /logo-light.png (dark orbit ring, visible on white/light bg)
+ * Dark mode:  /logo-dark.png  (silver orbit ring, visible on dark bg)
  *
- * Falls back to the inline SVG if the PNG somehow fails to load.
+ * Uses `resolvedTheme` so SSR doesn't cause a flash — defaults to
+ * light until hydration is complete.
  */
 export function CampusOrbitIcon({ size = "md", className }: CampusOrbitIconProps) {
   const { icon } = sizeMap[size]
+  const { resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Before hydration, always show the light logo to avoid layout shift
+  const src = mounted && resolvedTheme === "dark" ? "/logo-dark.png" : "/logo-light.png"
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src="/logo.png"
+      src={src}
       alt="CampusOrbit"
       width={icon}
       height={icon}
