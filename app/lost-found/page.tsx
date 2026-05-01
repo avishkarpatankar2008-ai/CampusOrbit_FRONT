@@ -33,6 +33,7 @@ import {
   type LostFoundItem,
 } from "@/lib/api"
 import { useAuth } from "@/lib/auth-context"
+import { useRouter } from "next/navigation"
 import {
   Search,
   MapPin,
@@ -46,6 +47,7 @@ import {
   Phone,
   Mail,
   X,
+  MessageCircle,
 } from "lucide-react"
 import { formatDistanceToNow, format } from "date-fns"
 import { toast } from "sonner"
@@ -68,6 +70,7 @@ const fetcher = async (type: "lost" | "found") => {
 
 export default function LostFoundPage() {
   const { isAuthenticated, user } = useAuth()
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<"lost" | "found">("lost")
   const [searchQuery, setSearchQuery] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -165,6 +168,22 @@ export default function LostFoundPage() {
     } else {
       toast.error(result.error || "Failed to delete")
     }
+  }
+
+  const handleMessageUser = (item: LostFoundItem, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    if (!isAuthenticated) {
+      toast.error("Please sign in to message the poster")
+      router.push("/login")
+      return
+    }
+    const prefill = `Hi, I'm contacting you about your ${item.type} item: ${item.title}`
+    const params = new URLSearchParams({
+      user: item.reported_by_id,
+      name: item.reported_by_name,
+      message: prefill,
+    })
+    router.push(`/chat?${params.toString()}`)
   }
 
   // Get display date: prefer date_lost_found, fall back to created_at
@@ -555,11 +574,11 @@ export default function LostFoundPage() {
                         </div>
                       </div>
 
-                      <div className="mt-4 border-t border-border pt-3">
+                      <div className="mt-4 border-t border-border pt-3 flex gap-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full"
+                          className="flex-1"
                           onClick={(e) => {
                             e.stopPropagation()
                             setSelectedItem(item)
@@ -567,6 +586,16 @@ export default function LostFoundPage() {
                         >
                           View Details
                         </Button>
+                        {!isOwner && (
+                          <Button
+                            size="sm"
+                            className="flex-1"
+                            onClick={(e) => handleMessageUser(item, e)}
+                          >
+                            <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
+                            Message
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -679,12 +708,28 @@ export default function LostFoundPage() {
               )}
 
               {/* Actions */}
-              <div className="flex gap-2 pt-2">
-                {!selectedItem.contact_email && (
-                  <Button variant="outline" className="flex-1" asChild>
+              <div className="flex gap-2 pt-2 flex-wrap">
+                {user?.id !== selectedItem.reported_by_id && (
+                  <Button
+                    className="flex-1 min-w-[120px]"
+                    onClick={() => handleMessageUser(selectedItem)}
+                  >
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    Message{" "}
+                    {selectedItem.type === "lost" ? "Poster" : "Finder"}
+                  </Button>
+                )}
+                {!selectedItem.contact_email && user?.id !== selectedItem.reported_by_id && (
+                  <Button variant="outline" size="icon" asChild>
                     <a href={`mailto:?subject=About your ${selectedItem.type} item: ${selectedItem.title}`}>
-                      <Mail className="mr-2 h-4 w-4" />
-                      Contact
+                      <Mail className="h-4 w-4" />
+                    </a>
+                  </Button>
+                )}
+                {selectedItem.contact_email && user?.id !== selectedItem.reported_by_id && (
+                  <Button variant="outline" size="icon" asChild>
+                    <a href={`mailto:${selectedItem.contact_email}`}>
+                      <Mail className="h-4 w-4" />
                     </a>
                   </Button>
                 )}
