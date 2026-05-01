@@ -288,11 +288,17 @@ function ChatContent() {
     load()
   }, [isAuthenticated])
 
-  // ── Handle ?user=<id>&name=<name> query param ─────────────────────────────
+  // ── Handle ?user=<id>&name=<name>&message=<prefill> query param ──────────
   useEffect(() => {
     const targetUserId = searchParams.get("user")
     const targetName = searchParams.get("name") || "User"
+    const prefillMessage = searchParams.get("message")
     if (!targetUserId || !isAuthenticated) return
+
+    // Prefill the message input if provided
+    if (prefillMessage) {
+      setNewMessage(decodeURIComponent(prefillMessage))
+    }
 
     const existing = conversations.find((c) => c.participantId === targetUserId)
     if (existing) {
